@@ -46,51 +46,73 @@ app.get('/',(req: Request ,res : Response)=>{
      res.send('Hello from Express!');
 })
 
-app.post('/subscribe',(req: Request ,res : Response)=>{
-    const subscription : PushSubscription = req.body;
-    subscriptions.push(subscription);
-      console.log('Subscription received:', subscription);
+app.post('/subscribe', (req: Request, res: Response) => {
+  const subscription: PushSubscription = req.body;
+  // Remove any existing subscription with the same endpoint
+  const index = subscriptions.findIndex(sub => sub.endpoint === subscription.endpoint);
+  if (index !== -1) {
+    subscriptions.splice(index, 1);
+  }
+  subscriptions.push(subscription);
+  console.log('Subscription received:', subscription);
   res.status(200).json({ message: 'Subscription added' });
-})
+});
 
-app.post('/send-notification', async(req : Request , res : Response)=>{
-     const payload = JSON.stringify({
+app.post('/send-notification', async (req: Request, res: Response) => {
+  const payload = JSON.stringify({
     title: 'Hello from Express!',
     body: 'This is a push notification!',
   });
 
   try {
-    for (const subscription of subscriptions){
-         await webPush.sendNotification(subscription, payload);
+    // Create a copy of subscriptions to avoid modifying during iteration
+    const currentSubscriptions = [...subscriptions];
+    for (const subscription of currentSubscriptions) {
+      try {
+        console.log('Sending notification to:', subscription.endpoint);
+        await webPush.sendNotification(subscription, payload);
+        console.log('Notification sent to:', subscription.endpoint);
+      } catch (error: any) {
+        console.error('Error sending to', subscription.endpoint, ':', error);
+        if (error.statusCode === 410) {
+          // Remove invalid subscription
+          const index = subscriptions.findIndex(sub => sub.endpoint === subscription.endpoint);
+          if (index !== -1) {
+            subscriptions.splice(index, 1);
+            console.log('Removed invalid subscription:', subscription.endpoint);
+          }
+        }
+      }
     }
-    res.status(200).json({ message: 'Notifications sent' });
-
+    res.status(200).json({ message: 'Notifications sent', remainingSubscriptions: subscriptions.length });
   } catch (error) {
-     console.error('Error sending notification:', error);
+    console.error('General error sending notifications:', error);
     res.status(500).json({ error: 'Failed to send notifications' });
   }
-})
+});
 
-// Send notifications every 30 seconds
-setInterval(async () => {
-  if (subscriptions.length > 0) {
-    const payload = JSON.stringify({
-      title: 'Scheduled Notification',
-      body: 'This is an automatic push notification!',
-    });
-    try {
-      for (const subscription of subscriptions) {
-        console.log('Sending scheduled notification to:', subscription.endpoint);
-        await webPush.sendNotification(subscription, payload);
-      }
-      console.log('Scheduled notifications sent');
-    } catch (error) {
-      console.error('Error sending scheduled notification:', error);
-    }
-  } else {
-    console.log('No subscriptions to send notifications to');
-  }
-}, 10000); // Every 10 seconds
+
+
+// // Send notifications every 30 seconds
+// setInterval(async () => {
+//   if (subscriptions.length > 0) {
+//     const payload = JSON.stringify({
+//       title: 'Scheduled Notification',
+//       body: 'This is an automatic push notification!',
+//     });
+//     try {
+//       for (const subscription of subscriptions) {
+//         console.log('Sending scheduled notification to:', subscription.endpoint);
+//         await webPush.sendNotification(subscription, payload);
+//       }
+//       console.log('Scheduled notifications sent');
+//     } catch (error) {
+//       console.error('Error sending scheduled notification:', error);
+//     }
+//   } else {
+//     console.log('No subscriptions to send notifications to');
+//   }
+// }, 10000); // Every 10 seconds
 
 
 const PORT = 3000;
