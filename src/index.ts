@@ -58,10 +58,12 @@ app.post('/subscribe', (req: Request, res: Response) => {
   res.status(200).json({ message: 'Subscription added' });
 });
 
+let notificationCounter = 1
+
 app.post('/send-notification', async (req: Request, res: Response) => {
   const payload = JSON.stringify({
     title: 'Hello from Express!',
-    body: 'This is a push notification!',
+    body: `This is push notification ${notificationCounter++}`,
   });
 
   try {
