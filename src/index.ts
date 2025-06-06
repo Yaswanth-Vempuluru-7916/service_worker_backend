@@ -53,10 +53,11 @@ app.post('/subscribe',(req: Request ,res : Response)=>{
   res.status(200).json({ message: 'Subscription added' });
 })
 
+let notificationCounter = 1
 app.post('/send-notification', async(req : Request , res : Response)=>{
      const payload = JSON.stringify({
     title: 'Hello from Express!',
-    body: 'This is a push notification!',
+    body: `This is a push notification ${notificationCounter++}!`,
   });
 
   try {
@@ -71,26 +72,26 @@ app.post('/send-notification', async(req : Request , res : Response)=>{
   }
 })
 
-// Send notifications every 30 seconds
-setInterval(async () => {
-  if (subscriptions.length > 0) {
-    const payload = JSON.stringify({
-      title: 'Scheduled Notification',
-      body: 'This is an automatic push notification!',
-    });
-    try {
-      for (const subscription of subscriptions) {
-        console.log('Sending scheduled notification to:', subscription.endpoint);
-        await webPush.sendNotification(subscription, payload);
-      }
-      console.log('Scheduled notifications sent');
-    } catch (error) {
-      console.error('Error sending scheduled notification:', error);
-    }
-  } else {
-    console.log('No subscriptions to send notifications to');
-  }
-}, 10000); // Every 10 seconds
+// // Send notifications every 30 seconds
+// setInterval(async () => {
+//   if (subscriptions.length > 0) {
+//     const payload = JSON.stringify({
+//       title: 'Scheduled Notification',
+//       body: 'This is an automatic push notification!',
+//     });
+//     try {
+//       for (const subscription of subscriptions) {
+//         console.log('Sending scheduled notification to:', subscription.endpoint);
+//         await webPush.sendNotification(subscription, payload);
+//       }
+//       console.log('Scheduled notifications sent');
+//     } catch (error) {
+//       console.error('Error sending scheduled notification:', error);
+//     }
+//   } else {
+//     console.log('No subscriptions to send notifications to');
+//   }
+// }, 10000); // Every 10 seconds
 
 
 const PORT = 3000;
